@@ -3,6 +3,7 @@ import { ViewMode, MobileTab, AttendanceRecord, ToastMessage, WorkMode, PunchTyp
 import { CURRENT_USER, INITIAL_ATTENDANCE_HISTORY, MOCK_ADMIN_EMPLOYEES, DEFAULT_COMPANY_INFO } from './data/mockData';
 import { GoogleWorkspaceService } from './services/googleWorkspace';
 import { FirebaseService } from './services/firebase';
+import { initAuth, getAccessToken } from './services/authService';
 
 import { Header } from './components/Header';
 import { EmployeeView } from './components/EmployeeView';
@@ -58,7 +59,19 @@ export default function App() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   // Google Workspace Auth
-  const [isSheetsConnected, setIsSheetsConnected] = useState<boolean>(true);
+  const [isSheetsConnected, setIsSheetsConnected] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setIsSheetsConnected(true);
+      },
+      () => {
+        setIsSheetsConnected(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Load local auth session & Admin Org registrations if saved
   useEffect(() => {
@@ -175,6 +188,7 @@ export default function App() {
       avatar: user.avatar || CURRENT_USER.avatar,
       email: companyEmail,
       passcode: user.passcode || user.empId,
+      registeredFaceUrl: user.registeredFaceUrl,
     };
 
     setCurrentUser(formattedUser);
@@ -247,7 +261,13 @@ export default function App() {
   };
 
   // Logout / Switch Account Handler
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      const { logout } = await import('./services/authService');
+      await logout();
+    } catch (e) {
+      console.error(e);
+    }
     localStorage.removeItem('sa_current_user');
     setIsAdminAuthenticated(false);
     setIsLoginModalOpen(true);
@@ -312,20 +332,25 @@ export default function App() {
     FirebaseService.saveAttendanceRecord(newRecord);
 
     // Sync to Google Sheets immediately
-    const sheetRes = await GoogleWorkspaceService.appendAttendanceToSheet(
-      GoogleWorkspaceService.getActiveSpreadsheetId(),
-      {
-        empId: currentUser.empId || currentUser.devCode,
-        empName: currentUser.name,
-        type: type === 'CHECK_IN' ? 'เข้างาน (Check-In)' : 'เลิกงาน (Check-Out)',
-        mode: mode,
-        lat: 13.736717,
-        lng: 100.523186,
-        dist: 14.8,
-        note: note || '-',
-        timestamp: now.toISOString(),
-      }
-    );
+    const matchedOrg = registeredOrgs.find(o => o.adminEmail.toLowerCase() === companyAdminEmail.toLowerCase());
+    const sheetId = matchedOrg?.spreadsheetId || GoogleWorkspaceService.getActiveSpreadsheetId();
+    
+    if (sheetId) {
+      await GoogleWorkspaceService.appendAttendanceToSheet(
+        sheetId,
+        {
+          empId: currentUser.empId || currentUser.devCode,
+          empName: currentUser.name,
+          type: type === 'CHECK_IN' ? 'เข้างาน (Check-In)' : 'เลิกงาน (Check-Out)',
+          mode: mode,
+          lat: 13.736717,
+          lng: 100.523186,
+          dist: 14.8,
+          note: note || '-',
+          timestamp: now.toISOString(),
+        }
+      );
+    }
 
     const titleAction = type === 'CHECK_IN' ? 'บันทึกสแกนใบหน้าเข้างานสำเร็จ!' : 'บันทึกเวลาเลิกงานสำเร็จ!';
     showToast(

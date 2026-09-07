@@ -80,7 +80,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // Handle Login
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -117,29 +117,45 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       (isDefaultAdmin &&
         (trimmedCode === '1234' || trimmedCode === 'ADM001' || trimmedCode === 'ADMIN'))
     ) {
-      const adminName = matchedOrg ? matchedOrg.adminName : 'ผู้ดูแลระบบ (Admin)';
-      const orgTitle = matchedOrg ? matchedOrg.orgName : 'Management & HR';
-
-      const adminUser: EmployeePayroll = {
-        empId: 'ADM-0001',
-        empName: adminName,
-        role: 'Human Resources & Systems Lead',
-        dept: orgTitle,
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-        workDays: '22/22 วัน',
-        baseSalary: 60000,
-        otPay: 0,
-        lateDeduction: 0,
-        ssoDeduction: 750,
-        taxDeduction: 4000,
-        netPay: 55250,
-        status: 'active',
-        email: trimmedEmail,
-        passcode: matchedOrg ? matchedOrg.adminPin : '1234',
-      };
-
-      onLoginSuccess(adminUser, trimmedEmail, true);
-      onShowToast('เข้าสู่ระบบสำเร็จ (Admin)', `ยินดีต้อนรับ ${adminName} (${trimmedEmail})`, 'admin_panel_settings');
+      try {
+        const { googleSignIn } = await import('../services/authService');
+        const result = await googleSignIn();
+        if (result && result.user.email?.toLowerCase() === trimmedEmail.toLowerCase()) {
+           const { getAccessToken } = await import('../services/authService');
+           const { GoogleWorkspaceService } = await import('../services/googleWorkspace');
+           const token = await getAccessToken();
+           if (token) {
+              GoogleWorkspaceService.setAccessToken(token);
+           }
+           const adminName = matchedOrg ? matchedOrg.adminName : 'ผู้ดูแลระบบ (Admin)';
+           const orgTitle = matchedOrg ? matchedOrg.orgName : 'Management & HR';
+           
+           const adminUser: EmployeePayroll = {
+             empId: 'ADM-0001',
+             empName: adminName,
+             role: 'Human Resources & Systems Lead',
+             dept: orgTitle,
+             avatar: result.user.photoURL || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+             workDays: '22/22 วัน',
+             baseSalary: 60000,
+             otPay: 0,
+             lateDeduction: 0,
+             ssoDeduction: 750,
+             taxDeduction: 4000,
+             netPay: 55250,
+             status: 'active',
+             email: trimmedEmail,
+             passcode: matchedOrg ? matchedOrg.adminPin : '1234',
+           };
+     
+           onLoginSuccess(adminUser, trimmedEmail, true);
+           onShowToast('เข้าสู่ระบบสำเร็จ (Admin)', `ยินดีต้อนรับ ${adminName} (${trimmedEmail})`, 'admin_panel_settings');
+        } else {
+           setErrorMsg('บัญชี Google ที่เข้าสู่ระบบไม่ตรงกับอีเมลที่ระบุ กรุณาลองใหม่');
+        }
+      } catch (err: any) {
+        setErrorMsg('เกิดข้อผิดพลาดในการยืนยันตัวตนแอดมิน');
+      }
       return;
     }
 
@@ -157,36 +173,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       onLoginSuccess(foundEmp, trimmedEmail, false);
       onShowToast('เข้าสู่ระบบสำเร็จ', `ยินดีต้อนรับคุณ ${foundEmp.empName} (${foundEmp.empId})`, 'face');
     } else {
-      // Fallback: create dynamic employee if code format looks like employee ID
-      if (
-        trimmedCode.startsWith('EMP') ||
-        trimmedCode.startsWith('DEV') ||
-        trimmedCode.startsWith('DES') ||
-        trimmedCode.startsWith('HR') ||
-        trimmedCode.startsWith('PASS')
-      ) {
-        const dynamicEmp: EmployeePayroll = {
-          empId: trimmedCode,
-          empName: `พนักงานรหัส ${trimmedCode}`,
-          role: 'พนักงานประจำองค์กร',
-          dept: 'ฝ่ายปฏิบัติการ',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-          workDays: '22/22 วัน',
-          baseSalary: 30000,
-          otPay: 0,
-          lateDeduction: 0,
-          ssoDeduction: 750,
-          taxDeduction: 1500,
-          netPay: 27750,
-          status: 'active',
-          email: trimmedEmail,
-          passcode: trimmedCode,
-        };
-        onLoginSuccess(dynamicEmp, trimmedEmail, false);
-        onShowToast('เข้าสู่ระบบสำเร็จ', `เข้าใช้งานรหัสพนักงาน ${trimmedCode}`, 'person');
-      } else {
-        setErrorMsg('ไม่พบรหัสผ่านพนักงานนี้ในระบบ กรุณาตรวจสอบรหัสผ่านที่แอดมินองค์กรตั้งให้');
-      }
+      setErrorMsg('ไม่พบพนักงานในระบบ กรุณาตรวจสอบอีเมลแอดมินหรือรหัสผ่านพนักงานให้ถูกต้อง');
     }
   };
 
@@ -380,98 +367,98 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
         {/* TAB 2: REGISTER ADMIN ORG */}
         {activeTab === 'register' && (
-          <form onSubmit={handleRegister} className="p-6 space-y-3.5 text-xs text-slate-700 max-h-[60vh] overflow-y-auto">
+          <div className="p-6 space-y-4 text-xs text-slate-700 text-center">
             {regErrorMsg && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 mb-4 text-left">
                 <span className="material-symbols-outlined text-[18px]">error</span>
                 <span>{regErrorMsg}</span>
               </div>
             )}
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                ชื่อองค์กร / บริษัท (Organization Name)
-              </label>
-              <input
-                type="text"
-                required
-                value={regOrgName}
-                onChange={(e) => setRegOrgName(e.target.value)}
-                placeholder="บริษัท เอซีเอ็ม การ์เม้นท์ จำกัด"
-                className="w-full px-4 py-2.5 rounded-2xl bg-rose-50/50 border border-rose-200 text-slate-800 font-medium focus:outline-none focus:border-rose-400 focus:bg-white transition-all"
-              />
+            
+            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2 text-blue-600">
+              <span className="material-symbols-outlined text-[32px]">shield_person</span>
             </div>
+            
+            <h3 className="text-[16px] font-extrabold text-slate-800">ลงทะเบียนแอดมินด้วยบัญชี Google</h3>
+            <p className="text-slate-500 font-medium mb-6 leading-relaxed">
+              แอดมินจะต้องลงทะเบียนองค์กรโดยใช้บัญชี Google เท่านั้น <br/>
+              เพื่อความปลอดภัยและการซิงค์ข้อมูลลงตารางเวลา (Google Sheets) โดยตรง
+            </p>
 
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                ชื่อ-นามสกุล ผู้ดูแลระบบ (Admin Full Name)
-              </label>
-              <input
-                type="text"
-                required
-                value={regAdminName}
-                onChange={(e) => setRegAdminName(e.target.value)}
-                placeholder="คุณภาวิณี ศรีสุข"
-                className="w-full px-4 py-2.5 rounded-2xl bg-rose-50/50 border border-rose-200 text-slate-800 font-medium focus:outline-none focus:border-rose-400 focus:bg-white transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                อีเมลแอดมินองค์กร (Admin Email)
-              </label>
-              <input
-                type="email"
-                required
-                value={regAdminEmail}
-                onChange={(e) => setRegAdminEmail(e.target.value)}
-                placeholder="hr@acmgarment.co.th"
-                className="w-full px-4 py-2.5 rounded-2xl bg-rose-50/50 border border-rose-200 text-slate-800 font-medium focus:outline-none focus:border-rose-400 focus:bg-white transition-all"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  ตั้งรหัส PIN แอดมิน
-                </label>
-                <input
-                  type="password"
-                  required
-                  maxLength={12}
-                  value={regAdminPin}
-                  onChange={(e) => setRegAdminPin(e.target.value)}
-                  placeholder="PIN 4-6 หลัก..."
-                  className="w-full px-4 py-2.5 rounded-2xl bg-rose-50/50 border border-rose-200 text-slate-800 font-mono font-bold focus:outline-none focus:border-rose-400 focus:bg-white transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  ยืนยันรหัส PIN
-                </label>
-                <input
-                  type="password"
-                  required
-                  maxLength={12}
-                  value={regConfirmPin}
-                  onChange={(e) => setRegConfirmPin(e.target.value)}
-                  placeholder="กรอกอีกครั้ง..."
-                  className="w-full px-4 py-2.5 rounded-2xl bg-rose-50/50 border border-rose-200 text-slate-800 font-mono font-bold focus:outline-none focus:border-rose-400 focus:bg-white transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="submit"
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-sm shadow-lg shadow-pink-200 transition-all active:scale-98 flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                <span>ยืนยันการลงทะเบียนองค์กร</span>
-              </button>
-            </div>
-          </form>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const { googleSignIn } = await import('../services/authService');
+                  const { GoogleWorkspaceService } = await import('../services/googleWorkspace');
+                  const result = await googleSignIn();
+                  if (result) {
+                    const { getAccessToken } = await import('../services/authService');
+                    const token = await getAccessToken();
+                    if (token) {
+                       GoogleWorkspaceService.setAccessToken(token);
+                    }
+                    
+                    let spreadsheetId = null;
+                    try {
+                      // Attempt to create a new spreadsheet for this org
+                      spreadsheetId = await GoogleWorkspaceService.createSpreadsheet(`WorkPulse_Attendance_${result.user.displayName || 'Org'}`);
+                    } catch (e) {
+                      console.error("Could not create spreadsheet initially", e);
+                    }
+                    
+                    // Create Admin User
+                    const newOrg: AdminOrganization = {
+                      id: `ORG-${Date.now()}`,
+                      orgName: result.user.displayName || 'บริษัทจำกัด',
+                      adminName: result.user.displayName || 'ผู้ดูแลระบบ',
+                      adminEmail: result.user.email || 'admin@example.com',
+                      adminPin: 'ADMIN', // Default PIN for new Google admins
+                      createdAt: new Date().toISOString(),
+                      spreadsheetId: spreadsheetId || undefined,
+                    };
+                    onRegisterAdminOrg(newOrg);
+                    
+                    const adminUser: EmployeePayroll = {
+                      empId: 'ADM-0001',
+                      empName: newOrg.adminName,
+                      role: 'ผู้ดูแลระบบ (Admin)',
+                      dept: newOrg.orgName,
+                      avatar: result.user.photoURL || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+                      workDays: '22/22 วัน',
+                      baseSalary: 60000,
+                      otPay: 0,
+                      lateDeduction: 0,
+                      ssoDeduction: 750,
+                      taxDeduction: 4000,
+                      netPay: 55250,
+                      status: 'active',
+                      email: newOrg.adminEmail,
+                      passcode: newOrg.adminPin,
+                    };
+                    
+                    onShowToast('ลงทะเบียนสำเร็จ!', `ยินดีต้อนรับคุณ ${newOrg.adminName} พร้อมเชื่อมต่อ Google Sheets แล้ว`, 'verified');
+                    onLoginSuccess(adminUser, newOrg.adminEmail, true);
+                  }
+                } catch (err: any) {
+                  setRegErrorMsg(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google');
+                }
+              }}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm bg-white"
+            >
+              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5" xmlnsXlink="http://www.w3.org/1999/xlink">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                <path fill="none" d="M0 0h48v48H0z"></path>
+              </svg>
+              <span className="font-bold text-slate-600 text-sm">ลงทะเบียนด้วย Google (Admin)</span>
+            </button>
+            <p className="text-[10px] text-slate-400 mt-4">
+              ส่วนพนักงานนั้น แอดมินองค์กรจะเป็นผู้เพิ่มรายชื่อและกำหนดรหัสผ่านเพื่อเข้าใช้งานให้
+            </p>
+          </div>
         )}
       </div>
     </div>

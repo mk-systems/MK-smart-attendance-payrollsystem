@@ -172,6 +172,23 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
   // Trigger Punch Handler
   const handleTriggerPunch = (type: PunchType) => {
+    // Very simple mockup: in real scenario, compare capturedPhoto to currentUser.registeredFaceUrl
+    // For now, if admin registered a face, simulate validation randomly
+    if (currentUser.registeredFaceUrl && !capturedPhoto) {
+      onShowToast('ไม่พบใบหน้า', 'ระบบนี้เปิดระบบยืนยันตัวตนด้วยใบหน้า กรุณาถ่ายภาพก่อนลงเวลา', 'error');
+      return;
+    }
+    
+    // Simulate validation taking place
+    if (currentUser.registeredFaceUrl && capturedPhoto) {
+      // 5% chance of mock failure for demo purposes
+      if (Math.random() < 0.05) {
+         onShowToast('การตรวจสอบใบหน้าล้มเหลว', 'ใบหน้าไม่ตรงกับที่ลงทะเบียนไว้ กรุณาถ่ายใหม่', 'warning');
+         setCapturedPhoto(null);
+         return;
+      }
+    }
+
     const photoToSave = capturedPhoto || currentUser.avatar;
     onRecordPunch(type, selectedWorkMode, punchNote, photoToSave);
     setPunchNote('');

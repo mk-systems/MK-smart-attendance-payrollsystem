@@ -17,8 +17,8 @@ export interface SyncPayload {
 }
 
 export class GoogleWorkspaceService {
-  private static accessToken: string | null = 'mock-oauth-token-active';
-  private static activeSpreadsheetId: string = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms';
+  private static accessToken: string | null = null;
+  private static activeSpreadsheetId: string = '';
   private static currentMonthSheetName: string = '2025_MARCH_ATTENDANCE';
 
   public static setAccessToken(token: string) {
@@ -39,6 +39,58 @@ export class GoogleWorkspaceService {
 
   public static getCurrentMonthSheetName(): string {
     return this.currentMonthSheetName;
+  }
+
+  public static async createSpreadsheet(title: string): Promise<string | null> {
+    if (!this.accessToken || this.accessToken.startsWith('mock')) return null;
+
+    try {
+      const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          properties: { title: title },
+          sheets: [
+            {
+              properties: { title: this.currentMonthSheetName },
+              data: [
+                {
+                  startRow: 0,
+                  startColumn: 0,
+                  rowData: [
+                    {
+                      values: [
+                        { userEnteredValue: { stringValue: 'Timestamp' } },
+                        { userEnteredValue: { stringValue: 'Emp ID' } },
+                        { userEnteredValue: { stringValue: 'Name' } },
+                        { userEnteredValue: { stringValue: 'Type' } },
+                        { userEnteredValue: { stringValue: 'Work Mode' } },
+                        { userEnteredValue: { stringValue: 'Location' } },
+                        { userEnteredValue: { stringValue: 'Distance' } },
+                        { userEnteredValue: { stringValue: 'Note' } },
+                        { userEnteredValue: { stringValue: 'Face Image' } },
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.activeSpreadsheetId = data.spreadsheetId;
+        return data.spreadsheetId;
+      }
+    } catch (err) {
+      console.error('Failed to create spreadsheet:', err);
+    }
+    return null;
   }
 
   /**

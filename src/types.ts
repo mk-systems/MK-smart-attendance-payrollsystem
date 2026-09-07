@@ -62,6 +62,7 @@ export interface EmployeePayroll {
   email?: string;
   phone?: string;
   passcode?: string;
+  registeredFaceUrl?: string; // New field for Face Registration
 }
 
 export interface AdminOrganization {
@@ -71,6 +72,7 @@ export interface AdminOrganization {
   adminEmail: string;
   adminPin: string; // Admin password/PIN
   createdAt: string;
+  spreadsheetId?: string; // Google Sheets ID for this org
 }
 
 export interface ToastMessage {

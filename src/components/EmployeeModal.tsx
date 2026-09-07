@@ -178,6 +178,59 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             </p>
           </div>
 
+          {/* Section: Face Registration (Admin Managed) */}
+          <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-3">
+            <div className="text-[12px] font-extrabold text-indigo-700 uppercase tracking-wider flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px]">face_retouching_natural</span>
+                ลงทะเบียนใบหน้า (Face Registration)
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-900 text-[10px] font-mono font-bold">
+                เพื่อป้องกันการแอบอ้าง
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+              <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-indigo-300 flex items-center justify-center bg-white overflow-hidden shrink-0 shadow-sm relative">
+                {formData.registeredFaceUrl ? (
+                  <img src={formData.registeredFaceUrl} alt="Registered Face" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-[32px] text-indigo-200">face</span>
+                )}
+                {formData.registeredFaceUrl && (
+                  <div className="absolute inset-0 bg-emerald-500/20 border border-emerald-400 rounded-2xl pointer-events-none"></div>
+                )}
+              </div>
+              <div className="space-y-2 flex-1 w-full text-center sm:text-left">
+                <p className="text-[11px] text-slate-600 font-medium">
+                  {formData.registeredFaceUrl 
+                    ? "ใบหน้าได้รับการลงทะเบียนเรียบร้อยแล้ว ระบบจะใช้ข้อมูลนี้เพื่อตรวจสอบและป้องกันการลงเวลาแทนกัน" 
+                    : "ยังไม่มีข้อมูลใบหน้าในระบบ กรุณาเพิ่มข้อมูลใบหน้าของพนักงานเพื่อใช้สแกนเข้างาน"}
+                </p>
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, registeredFaceUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150' })}
+                    className="py-2 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add_a_photo</span>
+                    <span>จำลองการลงทะเบียนใบหน้า</span>
+                  </button>
+                  {formData.registeredFaceUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, registeredFaceUrl: undefined })}
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold text-xs transition-colors shadow-sm"
+                      title="ลบใบหน้า"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Section 1: Basic Profile */}
           <div className="p-4 rounded-2xl bg-rose-50/40 border border-rose-200 space-y-3">
             <div className="text-[12px] font-bold text-rose-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
