@@ -40,6 +40,45 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Quick Login Action Helper
+  const handleQuickLogin = (role: 'admin' | 'employee') => {
+    if (role === 'admin') {
+      setEmail('longhacberng@gmail.com');
+      setPasscode('1234');
+      setErrorMsg('');
+
+      const adminUser: EmployeePayroll = {
+        empId: 'ADM-0001',
+        empName: 'ผู้ดูแลระบบ (Admin)',
+        role: 'Human Resources & Systems Lead',
+        dept: 'Management & HR',
+        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+        workDays: '22/22 วัน',
+        baseSalary: 60000,
+        otPay: 0,
+        lateDeduction: 0,
+        ssoDeduction: 750,
+        taxDeduction: 4000,
+        netPay: 55250,
+        status: 'active',
+        email: 'longhacberng@gmail.com',
+        passcode: '1234',
+      };
+
+      onLoginSuccess(adminUser, 'longhacberng@gmail.com', true);
+      onShowToast('เข้าสู่ระบบสำเร็จ (Admin)', 'ยินดีต้อนรับ ผู้ดูแลระบบ (Admin) (longhacberng@gmail.com)', 'admin_panel_settings');
+    } else {
+      const defaultEmp = adminEmployees.find((e) => e.empId === 'DEV-0042') || adminEmployees[0];
+      if (defaultEmp) {
+        setEmail('longhacberng@gmail.com');
+        setPasscode(defaultEmp.passcode || defaultEmp.empId);
+        setErrorMsg('');
+        onLoginSuccess(defaultEmp, 'longhacberng@gmail.com', false);
+        onShowToast('เข้าสู่ระบบสำเร็จ', `ยินดีต้อนรับคุณ ${defaultEmp.empName} (${defaultEmp.empId})`, 'face');
+      }
+    }
+  };
+
   // Handle Login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,16 +97,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
+    const isDefaultAdmin = 
+      trimmedEmail.toLowerCase() === 'longhacberng@gmail.com' ||
+      trimmedEmail.toLowerCase() === defaultEmail.toLowerCase();
+
     // Check if code matches Admin Passcode from Registered Orgs or Defaults
     const matchedOrg = registeredOrgs.find(
       (o) =>
         o.adminEmail.toLowerCase() === trimmedEmail.toLowerCase() &&
-        (o.adminPin === trimmedCode || trimmedCode === '1234' || trimmedCode === 'ADMIN' || trimmedCode === 'ADM001')
+        (o.adminPin.toUpperCase() === trimmedCode || 
+         o.adminPin === passcode.trim() || 
+         trimmedCode === '1234' || 
+         trimmedCode === 'ADMIN' || 
+         trimmedCode === 'ADM001')
     );
 
     if (
       matchedOrg ||
-      (trimmedEmail.toLowerCase() === defaultEmail.toLowerCase() &&
+      (isDefaultAdmin &&
         (trimmedCode === '1234' || trimmedCode === 'ADM001' || trimmedCode === 'ADMIN'))
     ) {
       const adminName = matchedOrg ? matchedOrg.adminName : 'ผู้ดูแลระบบ (Admin)';
@@ -102,6 +149,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         e.empId.toUpperCase() === trimmedCode ||
         e.empId.replace('-', '').toUpperCase() === trimmedCode ||
         (e.passcode && e.passcode.toUpperCase() === trimmedCode) ||
+        (e.passcode && e.passcode === passcode.trim()) ||
         (e.email && e.email.toLowerCase() === trimmedEmail.toLowerCase() && trimmedCode.length >= 3)
     );
 
@@ -301,6 +349,31 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <span className="material-symbols-outlined text-[20px]">login</span>
                 <span>เข้าสู่ระบบ</span>
               </button>
+            </div>
+
+            {/* Quick Demo Section */}
+            <div className="border-t border-rose-100 pt-4 mt-2 space-y-2">
+              <div className="text-[11px] font-bold text-slate-500 text-center uppercase tracking-wider">
+                💡 ทางลัดสำหรับทดสอบระบบ (Quick Demo Buttons)
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('admin')}
+                  className="py-2.5 px-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-amber-600">admin_panel_settings</span>
+                  แอดมิน (Admin)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('employee')}
+                  className="py-2.5 px-3 rounded-2xl bg-pink-50 hover:bg-pink-100 text-rose-700 border border-pink-200 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-rose-500">badge</span>
+                  พนักงาน (Staff)
+                </button>
+              </div>
             </div>
           </form>
         )}

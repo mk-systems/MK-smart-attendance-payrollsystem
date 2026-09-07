@@ -135,6 +135,27 @@ export default function App() {
     };
   }, []);
 
+  // Subscribe to Firebase Firestore Employees Realtime Updates
+  useEffect(() => {
+    const unsubscribe = FirebaseService.subscribeEmployees((employees) => {
+      if (employees && employees.length > 0) {
+        setAdminEmployees((prev) => {
+          const combined = [...employees];
+          prev.forEach((p) => {
+            if (!combined.some((c) => c.empId === p.empId)) {
+              combined.push(p);
+            }
+          });
+          return combined;
+        });
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
   const showToast = (title: string, message: string, icon: string = 'check_circle') => {
     const id = Date.now().toString();
     setToast({ id, title, message, icon });
