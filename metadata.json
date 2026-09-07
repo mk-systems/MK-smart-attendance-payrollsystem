@@ -1,0 +1,6 @@
+{
+  "name": "WorkPulse Hub",
+  "description": "ระบบตอกบัตรเข้า-ออกงานด้วย GPS/ใบหน้า และบริหารจัดการเงินเดือน (WorkPulse Hub)",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
