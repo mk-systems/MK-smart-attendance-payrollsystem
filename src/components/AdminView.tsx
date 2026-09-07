@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
 import { CompanyInfo, EmployeePayroll } from '../types';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
 
 interface AdminViewProps {
   companyInfo: CompanyInfo;
@@ -68,6 +81,29 @@ export const AdminView: React.FC<AdminViewProps> = ({
       emp.dept.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (emp.passcode && emp.passcode.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Mock data for Weekly Check-ins vs Check-outs
+  const weeklyData = [
+    { name: 'จันทร์', checkIns: Math.max(adminEmployees.length - 2, 0), checkOuts: Math.max(adminEmployees.length - 3, 0) },
+    { name: 'อังคาร', checkIns: Math.max(adminEmployees.length - 1, 0), checkOuts: Math.max(adminEmployees.length - 1, 0) },
+    { name: 'พุธ', checkIns: Math.max(adminEmployees.length - 4, 0), checkOuts: Math.max(adminEmployees.length - 4, 0) },
+    { name: 'พฤหัสฯ', checkIns: Math.max(adminEmployees.length - 2, 0), checkOuts: Math.max(adminEmployees.length - 2, 0) },
+    { name: 'ศุกร์', checkIns: Math.max(adminEmployees.length - 1, 0), checkOuts: Math.max(adminEmployees.length - 5, 0) },
+  ];
+
+  // Derived data for Department-wise attendance
+  const deptDataMap = adminEmployees.reduce((acc, emp) => {
+    acc[emp.dept] = (acc[emp.dept] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const COLORS = ['#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#3b82f6', '#0ea5e9'];
+  
+  const departmentData = Object.keys(deptDataMap).map((key, index) => ({
+    name: key,
+    value: deptDataMap[key],
+    color: COLORS[index % COLORS.length]
+  }));
 
   return (
     <div className="space-y-6">
@@ -210,62 +246,132 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </button>
       </div>
 
-      {/* Real-Time KPI Stats (4 Cards) */}
+      {/* Real-Time KPI Stats & Charts */}
       {(activeTab === 'overview' || activeTab === 'all') && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          {/* KPI 1 */}
-          <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest">พนักงานทั้งหมด</span>
-              <span className="material-symbols-outlined text-rose-500 text-[20px]">groups</span>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {/* KPI 1 */}
+            <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
+              <div className="flex items-center justify-between text-slate-500 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest">พนักงานทั้งหมด</span>
+                <span className="material-symbols-outlined text-rose-500 text-[20px]">groups</span>
+              </div>
+              <div className="font-mono text-[24px] md:text-[28px] font-extrabold text-slate-800">
+                {adminEmployees.length}<span className="text-xs md:text-sm font-normal text-slate-500"> คน</span>
+              </div>
+              <div className="text-[10px] md:text-[11px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[12px]">trending_up</span> ในฐานข้อมูลองค์กร
+              </div>
             </div>
-            <div className="font-mono text-[24px] md:text-[28px] font-extrabold text-slate-800">
-              {adminEmployees.length}<span className="text-xs md:text-sm font-normal text-slate-500"> คน</span>
+
+            {/* KPI 2 */}
+            <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
+              <div className="flex items-center justify-between text-slate-500 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest">มาทำงานแล้ววันนี้</span>
+                <span className="material-symbols-outlined text-emerald-600 text-[20px]">check_circle</span>
+              </div>
+              <div className="font-mono text-[24px] md:text-[28px] font-extrabold text-slate-800">
+                {Math.max(adminEmployees.length - 1, 0)}<span className="text-xs md:text-sm font-normal text-slate-500">/{adminEmployees.length} คน</span>
+              </div>
+              <div className="text-[10px] md:text-[11px] text-rose-600 font-bold mt-1">
+                95% เข้างานตรงเวลา
+              </div>
             </div>
-            <div className="text-[10px] md:text-[11px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
-              <span className="material-symbols-outlined text-[12px]">trending_up</span> ในฐานข้อมูลองค์กร
+
+            {/* KPI 3 */}
+            <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
+              <div className="flex items-center justify-between text-slate-500 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest">ยอดจ่ายเงินเดือนรวม</span>
+                <span className="material-symbols-outlined text-emerald-600 text-[20px]">payments</span>
+              </div>
+              <div className="font-mono text-[18px] md:text-[22px] font-extrabold text-emerald-600 truncate">
+                ฿{adminEmployees.reduce((acc, e) => acc + e.netPay, 0).toLocaleString('th-TH')}
+              </div>
+              <div className="text-[10px] md:text-[11px] text-slate-500 font-medium mt-1">
+                ประจำรอบ {companyInfo.payPeriod}
+              </div>
+            </div>
+
+            {/* KPI 4 */}
+            <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
+              <div className="flex items-center justify-between text-slate-500 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest">มาสาย/หักสาย</span>
+                <span className="material-symbols-outlined text-rose-500 text-[20px]">warning</span>
+              </div>
+              <div className="font-mono text-[24px] md:text-[28px] font-extrabold text-rose-600">
+                1<span className="text-xs md:text-sm font-normal text-slate-500"> คน</span>
+              </div>
+              <div className="text-[10px] md:text-[11px] text-rose-600 font-medium mt-1">
+                สายเกิน 15 นาที
+              </div>
             </div>
           </div>
 
-          {/* KPI 2 */}
-          <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest">มาทำงานแล้ววันนี้</span>
-              <span className="material-symbols-outlined text-emerald-600 text-[20px]">check_circle</span>
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Bar Chart: Weekly Check-ins vs Check-outs */}
+            <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-6 border border-rose-200 shadow-xl shadow-pink-100/50">
+              <div className="mb-4">
+                <h3 className="text-[15px] md:text-[16px] font-extrabold text-slate-800">
+                  สรุปการลงเวลาเข้า-ออกรายสัปดาห์
+                </h3>
+                <p className="text-[11px] md:text-[12px] text-slate-500">
+                  สถิติเปรียบเทียบ Check-in และ Check-out (5 วันย้อนหลัง)
+                </p>
+              </div>
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <RechartsTooltip 
+                      contentStyle={{ borderRadius: '16px', border: '1px solid #ffe4e6', boxShadow: '0 4px 6px -1px rgba(255, 228, 230, 0.5)', fontSize: '12px' }}
+                      cursor={{ fill: '#fff1f2' }}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                    <Bar dataKey="checkIns" name="Check-in (เข้างาน)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                    <Bar dataKey="checkOuts" name="Check-out (ออกงาน)" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="font-mono text-[24px] md:text-[28px] font-extrabold text-slate-800">
-              {adminEmployees.length - 1}<span className="text-xs md:text-sm font-normal text-slate-500">/{adminEmployees.length} คน</span>
-            </div>
-            <div className="text-[10px] md:text-[11px] text-rose-600 font-bold mt-1">
-              95% เข้างานตรงเวลา
-            </div>
-          </div>
 
-          {/* KPI 3 */}
-          <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest">ยอดจ่ายเงินเดือนรวม</span>
-              <span className="material-symbols-outlined text-emerald-600 text-[20px]">payments</span>
-            </div>
-            <div className="font-mono text-[18px] md:text-[22px] font-extrabold text-emerald-600 truncate">
-              ฿{adminEmployees.reduce((acc, e) => acc + e.netPay, 0).toLocaleString('th-TH')}
-            </div>
-            <div className="text-[10px] md:text-[11px] text-slate-500 font-medium mt-1">
-              ประจำรอบ {companyInfo.payPeriod}
-            </div>
-          </div>
-
-          {/* KPI 4 */}
-          <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-5 border border-rose-200 shadow-lg shadow-pink-100/50">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest">มาสาย/หักสาย</span>
-              <span className="material-symbols-outlined text-rose-500 text-[20px]">warning</span>
-            </div>
-            <div className="font-mono text-[24px] md:text-[28px] font-extrabold text-rose-600">
-              1<span className="text-xs md:text-sm font-normal text-slate-500"> คน</span>
-            </div>
-            <div className="text-[10px] md:text-[11px] text-rose-600 font-medium mt-1">
-              สายเกิน 15 นาที
+            {/* Pie Chart: Department Distribution */}
+            <div className="bg-white/90 backdrop-blur rounded-3xl p-4 md:p-6 border border-rose-200 shadow-xl shadow-pink-100/50">
+              <div className="mb-4">
+                <h3 className="text-[15px] md:text-[16px] font-extrabold text-slate-800">
+                  สัดส่วนพนักงานแยกตามแผนก
+                </h3>
+                <p className="text-[11px] md:text-[12px] text-slate-500">
+                  การกระจายตัวของบุคลากรภายในองค์กร
+                </p>
+              </div>
+              <div className="h-[250px] w-full flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={departmentData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                      className="text-[10px] font-bold fill-slate-700"
+                    >
+                      {departmentData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      contentStyle={{ borderRadius: '16px', border: '1px solid #ffe4e6', boxShadow: '0 4px 6px -1px rgba(255, 228, 230, 0.5)', fontSize: '12px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
